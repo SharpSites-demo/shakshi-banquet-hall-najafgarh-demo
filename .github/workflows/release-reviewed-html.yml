@@ -1,0 +1,51 @@
+name: Publish and release exact reviewed HTML
+on:
+  workflow_call:
+    inputs:
+      expected_sha256:
+        required: true
+        type: string
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+jobs:
+  publish:
+    uses: SharpSites-demo/sparta-gym-spa-ritik-demo/.github/workflows/publish-reviewed-html.yml@41cd0e039ca25ad2234ffc0978649d9e00875f09
+    with:
+      expected_sha256: ${{ inputs.expected_sha256 }}
+  release:
+    needs: publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: gh-pages
+          persist-credentials: false
+      - name: Verify and stage only reviewed public HTML
+        shell: python
+        env:
+          EXPECTED_SHA256: ${{ inputs.expected_sha256 }}
+        run: |
+          import os, pathlib, hashlib
+          content = pathlib.Path('index.html').read_bytes()
+          assert hashlib.sha256(content).hexdigest() == os.environ['EXPECTED_SHA256'], 'Reviewed source hash mismatch'
+          assert b'ritik-sharma1.github.io' not in content.lower(), 'Personal host dependency forbidden'
+          target = pathlib.Path('_reviewed_public')
+          target.mkdir()
+          (target / 'index.html').write_bytes(content)
+          print('Staged exact reviewed HTML:', os.environ['EXPECTED_SHA256'])
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: _reviewed_public
+      - name: Deploy verified reviewed page
+        id: deployment
+        uses: actions/deploy-pages@v4
