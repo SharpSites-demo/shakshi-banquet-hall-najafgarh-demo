@@ -1,0 +1,14 @@
+name: Release reviewed SharpSites website
+on:
+  push:
+    branches: [gh-pages]
+    paths: [.github/workflows/publish-reviewed-gumloop1.yml]
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+jobs:
+  publish:
+    uses: ./.github/workflows/release-reviewed-html.yml
+    with:
+      expected_sha256: b4c778a193d114ac8a13e9ea7fbd7129747348ff823970837b0b5c25d4a8f741
